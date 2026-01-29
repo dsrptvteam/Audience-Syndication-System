@@ -30,6 +30,7 @@ model Client {
   audienceMembers    AudienceMember[]
   fileProcessingLogs FileProcessingLog[]
   metaSyncLogs       MetaSyncLog[]
+  purchaseRemovals   PurchaseRemoval[]
 
   @@map("clients")
 }
@@ -107,15 +108,19 @@ model MetaSyncLog {
 // ================================
 model PurchaseRemoval {
   id           Int      @id @default(autoincrement())
+  clientId     Int
   email        String?
   phone        String?
   firstName    String?
   lastName     String?
   removedAt    DateTime @default(now())
   sourceFile   String?
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
+  @@index([clientId])
   @@index([email])
   @@index([phone])
+  @@index([removedAt])
   @@map("purchase_removals")
 }
 
