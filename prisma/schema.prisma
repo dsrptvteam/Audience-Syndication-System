@@ -23,11 +23,13 @@ model Client {
   sftpPassword       String              // Encrypted
   sftpDirectory      String
   filePattern        String              @default("*.csv")
+  metaAudienceId     String?             // Meta Custom Audience ID
   isActive           Boolean             @default(true)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   audienceMembers    AudienceMember[]
   fileProcessingLogs FileProcessingLog[]
+  metaSyncLogs       MetaSyncLog[]
 
   @@map("clients")
 }
@@ -84,6 +86,8 @@ model FileProcessingLog {
 // ================================
 model MetaSyncLog {
   id             Int      @id @default(autoincrement())
+  clientId       Int
+  audienceId     String?
   syncType       String   // add, remove
   recordsTotal   Int      @default(0)
   recordsSuccess Int      @default(0)
@@ -91,7 +95,9 @@ model MetaSyncLog {
   status         String   @default("pending") // pending, processing, completed, failed
   errorMessage   String?
   syncedAt       DateTime @default(now())
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
+  @@index([clientId])
   @@index([syncedAt])
   @@map("meta_sync_log")
 }
