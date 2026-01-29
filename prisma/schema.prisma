@@ -1,0 +1,127 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ================================
+// Client configuration table
+// ================================
+model Client {
+  id                 Int                 @id @default(autoincrement())
+  name               String              @unique
+  sftpHost           String
+  sftpPort           Int                 @default(22)
+  sftpUsername       String
+  sftpPassword       String              // Encrypted
+  sftpDirectory      String
+  filePattern        String              @default("*.csv")
+  isActive           Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  audienceMembers    AudienceMember[]
+  fileProcessingLogs FileProcessingLog[]
+
+  @@map("clients")
+}
+
+// ================================
+// Audience members table
+// ================================
+model AudienceMember {
+  id           Int      @id @default(autoincrement())
+  clientId     Int
+  email        String?
+  phone        String?
+  firstName    String?
+  lastName     String?
+  dateAdded    DateTime @default(now())
+  daysRemaining Int      @default(180)
+  sourceFile   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([phone])
+  @@index([firstName, lastName])
+  @@index([dateAdded])
+  @@index([daysRemaining])
+  @@index([clientId])
+  @@map("audience_members")
+}
+
+// ================================
+// File processing log table
+// ================================
+model FileProcessingLog {
+  id             Int      @id @default(autoincrement())
+  clientId       Int
+  fileName       String
+  recordsTotal   Int      @default(0)
+  recordsNew     Int      @default(0)
+  recordsUpdated Int      @default(0)
+  recordsSkipped Int      @default(0)
+  status         String   @default("pending") // pending, processing, completed, failed
+  errorMessage   String?
+  processedAt    DateTime @default(now())
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([processedAt])
+  @@map("file_processing_log")
+}
+
+// ================================
+// Meta sync log table
+// ================================
+model MetaSyncLog {
+  id             Int      @id @default(autoincrement())
+  syncType       String   // add, remove
+  recordsTotal   Int      @default(0)
+  recordsSuccess Int      @default(0)
+  recordsFailed  Int      @default(0)
+  status         String   @default("pending") // pending, processing, completed, failed
+  errorMessage   String?
+  syncedAt       DateTime @default(now())
+
+  @@index([syncedAt])
+  @@map("meta_sync_log")
+}
+
+// ================================
+// Purchase removals table
+// ================================
+model PurchaseRemoval {
+  id           Int      @id @default(autoincrement())
+  email        String?
+  phone        String?
+  firstName    String?
+  lastName     String?
+  removedAt    DateTime @default(now())
+  sourceFile   String?
+
+  @@index([email])
+  @@index([phone])
+  @@map("purchase_removals")
+}
+
+// ================================
+// Alert recipients table
+// ================================
+model AlertRecipient {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("alert_recipients")
+}
