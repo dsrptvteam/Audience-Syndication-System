@@ -18,12 +18,6 @@ interface DownloadResult {
   content: string
 }
 
-interface FileInfo {
-  name: string
-  modifyTime: number
-  type: string
-}
-
 /**
  * Connects to SFTP server using client credentials from database
  * @param clientId - The database ID of the client
