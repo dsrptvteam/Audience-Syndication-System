@@ -59,7 +59,7 @@ export async function connectToSFTP(clientId: string): Promise<SFTPConnectionRes
   let decryptedPassword: string
   try {
     decryptedPassword = decryptPassword(client.sftpPassword)
-  } catch (error) {
+  } catch {
     safeLog({
       event: 'sftp_decrypt_failed',
       clientName: client.name,
@@ -131,12 +131,12 @@ export async function downloadLatestCSV(clientId: string): Promise<DownloadResul
     const fileList = await sftp.list(clientData.sftpDirectory)
 
     // Filter for .csv files only
-    const csvFiles = fileList.filter((file): file is FileInfo & { type: '-' } => {
+    const csvFiles = fileList.filter((file) => {
       return (
         file.type === '-' && // Regular file (not directory)
         file.name.toLowerCase().endsWith('.csv')
       )
-    })
+    }) as FileInfo[]
 
     if (csvFiles.length === 0) {
       throw new Error('No CSV files in folder')

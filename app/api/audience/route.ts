@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     const validationResult = audienceSearchSchema.safeParse(rawParams)
     if (!validationResult.success) {
       return NextResponse.json(
-        { error: 'Invalid parameters', details: validationResult.error.errors },
+        { error: 'Invalid parameters', details: validationResult.error.issues },
         { status: 400 }
       )
     }
