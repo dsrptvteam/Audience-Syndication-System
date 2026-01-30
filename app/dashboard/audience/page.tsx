@@ -24,15 +24,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Search, ChevronLeft, ChevronRight, Users } from "lucide-react"
 
 interface AudienceMember {
-  id: string
-  firstName: string
-  lastName: string
+  id: number
+  firstName: string | null
+  lastName: string | null
   email: string | null
   phone: string | null
-  retentionExpiry: string
-  createdAt: string
+  daysRemaining: number
+  dateAdded: string
   client: {
-    id: string
+    id: number
     name: string
   }
 }
@@ -88,8 +88,13 @@ export default function AudiencePage() {
       const response = await fetch(`/api/audience?${params}`)
       if (response.ok) {
         const data = await response.json()
-        setMembers(data.members || [])
-        setPagination(data.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 })
+        setMembers(data.data || [])
+        setPagination({
+          page: data.pagination?.page || 1,
+          limit: data.pagination?.limit || 20,
+          total: data.pagination?.total || 0,
+          totalPages: data.pagination?.pages || 0,
+        })
       }
     } catch (error) {
       console.error("Failed to fetch audience:", error)
@@ -121,16 +126,7 @@ export default function AudiencePage() {
     fetchAudience(newPage, search, selectedClient)
   }
 
-  const getDaysRemaining = (expiryDate: string): number => {
-    const expiry = new Date(expiryDate)
-    const now = new Date()
-    const diffTime = expiry.getTime() - now.getTime()
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    return diffDays
-  }
-
-  const getDaysRemainingBadge = (expiryDate: string) => {
-    const days = getDaysRemaining(expiryDate)
+  const getDaysRemainingBadge = (days: number) => {
     if (days <= 0) {
       return <Badge variant="destructive">Expired</Badge>
     }
@@ -239,16 +235,16 @@ export default function AudiencePage() {
                   {members.map((member) => (
                     <TableRow key={member.id}>
                       <TableCell className="font-medium">
-                        {member.firstName} {member.lastName}
+                        {member.firstName || ""} {member.lastName || ""}
                       </TableCell>
                       <TableCell>{member.email || "—"}</TableCell>
                       <TableCell>{formatPhone(member.phone)}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{member.client.name}</Badge>
                       </TableCell>
-                      <TableCell>{getDaysRemainingBadge(member.retentionExpiry)}</TableCell>
+                      <TableCell>{getDaysRemainingBadge(member.daysRemaining)}</TableCell>
                       <TableCell className="text-muted-foreground">
-                        {formatDate(member.createdAt)}
+                        {formatDate(member.dateAdded)}
                       </TableCell>
                     </TableRow>
                   ))}
