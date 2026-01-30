@@ -14,6 +14,8 @@ export const authOptions: AuthOptions = {
       maxAge: 24 * 60 * 60, // 24 hours
       sendVerificationRequest: async ({ identifier: email, url }) => {
         console.log('Sending verification email to:', email)
+        console.log('Magic link URL:', url)
+        console.log('NEXTAUTH_URL env:', process.env.NEXTAUTH_URL)
         try {
           await resend.emails.send({
             from: process.env.EMAIL_FROM || 'noreply@example.com',
