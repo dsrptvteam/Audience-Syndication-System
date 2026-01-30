@@ -49,15 +49,28 @@ export const authOptions: AuthOptions = {
   },
   pages: {
     signIn: '/auth/signin',
+    error: '/auth/signin', // Redirect errors to signin page
   },
   callbacks: {
     async signIn() {
       return true // Allow all sign-ins
     },
     async redirect({ url, baseUrl }) {
-      // Always redirect to dashboard after sign-in
-      if (url.startsWith('/')) return `${baseUrl}${url}`
-      else if (new URL(url).origin === baseUrl) return url
+      // Safely handle redirects after sign-in
+      try {
+        // Handle relative URLs
+        if (url.startsWith('/')) {
+          return `${baseUrl}${url}`
+        }
+        // Handle absolute URLs from same origin
+        const urlObj = new URL(url)
+        if (urlObj.origin === baseUrl) {
+          return url
+        }
+      } catch {
+        // If URL parsing fails, redirect to dashboard
+      }
+      // Default: redirect to dashboard
       return `${baseUrl}/dashboard`
     },
     async jwt({ token, user }) {
