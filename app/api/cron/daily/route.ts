@@ -339,6 +339,7 @@ export async function GET(
       clientsProcessed: activeClients.length,
       totalRecordsAdded,
       totalRecordsSynced,
+      processingTimeMs: processingTime,
       errors,
     })
   } catch (error) {

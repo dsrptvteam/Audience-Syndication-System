@@ -59,7 +59,7 @@ export async function connectToSFTP(clientId: string): Promise<SFTPConnectionRes
   let decryptedPassword: string
   try {
     decryptedPassword = decryptPassword(client.sftpPassword)
-  } catch (error) {
+  } catch (_error) {
     safeLog({
       event: 'sftp_decrypt_failed',
       clientName: client.name,

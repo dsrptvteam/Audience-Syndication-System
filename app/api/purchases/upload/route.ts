@@ -187,7 +187,7 @@ export async function POST(
           })
 
           removedFromAudience++
-        } catch (error) {
+        } catch (_error) {
           // Log but continue processing
           safeLog({
             event: 'purchase_upload_delete_error',
