@@ -110,7 +110,7 @@ export async function GET(
     ])
 
     // Add client name to each entry
-    const data: HistoryEntry[] = logs.map((log) => ({
+    const data: HistoryEntry[] = logs.map((log: { id: number; clientId: number; audienceId: string | null; syncType: string; recordsTotal: number; recordsSuccess: number; recordsFailed: number; status: string; errorMessage: string | null; syncedAt: Date }) => ({
       ...log,
       clientName: client.name,
     }))

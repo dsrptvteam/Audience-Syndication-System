@@ -56,7 +56,7 @@ export async function GET() {
     ])
 
     // Get client names for the breakdown
-    const clientIds = byClient.map((c) => c.clientId)
+    const clientIds = byClient.map((c: { clientId: number; _count: { id: number } }) => c.clientId)
     const clients = await prisma.client.findMany({
       where: {
         id: {
@@ -70,8 +70,8 @@ export async function GET() {
     })
 
     // Map client names to the breakdown
-    const clientMap = new Map(clients.map((c) => [c.id, c.name]))
-    const byClientWithNames = byClient.map((item) => ({
+    const clientMap = new Map(clients.map((c: { id: number; name: string }) => [c.id, c.name]))
+    const byClientWithNames = byClient.map((item: { clientId: number; _count: { id: number } }) => ({
       clientId: item.clientId,
       clientName: clientMap.get(item.clientId) || 'Unknown',
       count: item._count.id,

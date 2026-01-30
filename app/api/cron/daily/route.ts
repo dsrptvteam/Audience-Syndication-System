@@ -207,7 +207,7 @@ export async function GET(
 
             if (audienceMembers.length > 0) {
               const formattedData = formatAudienceData(
-                audienceMembers.map((m) => ({
+                audienceMembers.map((m: { email: string | null; phone: string | null; firstName: string | null; lastName: string | null }) => ({
                   email: m.email,
                   phone: m.phone,
                   firstName: m.firstName || '',
@@ -300,7 +300,7 @@ export async function GET(
       if (alertRecipients.length > 0) {
         await resend.emails.send({
           from: process.env.EMAIL_FROM || 'noreply@example.com',
-          to: alertRecipients.map((r) => r.email),
+          to: alertRecipients.map((r: { email: string }) => r.email),
           subject: `Daily Audience Sync Report - ${dateString}`,
           html: getDailySummaryEmail(summaryData),
           text: getDailySummaryText(summaryData),

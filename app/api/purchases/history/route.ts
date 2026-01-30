@@ -106,7 +106,7 @@ export async function GET(
     ])
 
     // Add client name to each entry
-    const data: HistoryEntry[] = removals.map((removal) => ({
+    const data: HistoryEntry[] = removals.map((removal: { id: number; clientId: number; email: string | null; phone: string | null; firstName: string | null; lastName: string | null; sourceFile: string | null; removedAt: Date }) => ({
       ...removal,
       clientName: client.name,
     }))

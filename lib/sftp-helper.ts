@@ -131,7 +131,7 @@ export async function downloadLatestCSV(clientId: string): Promise<DownloadResul
     const fileList = await sftp.list(clientData.sftpDirectory)
 
     // Filter for .csv files only
-    const csvFiles = fileList.filter((file): file is FileInfo & { type: '-' } => {
+    const csvFiles = fileList.filter((file) => {
       return (
         file.type === '-' && // Regular file (not directory)
         file.name.toLowerCase().endsWith('.csv')
