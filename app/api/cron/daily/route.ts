@@ -328,6 +328,7 @@ export async function GET(
     safeLog({
       event: 'cron_daily_complete',
       recordsFound: totalRecordsAdded,
+      processingTimeMs: processingTime,
       status: 'success',
       timestamp: new Date().toISOString(),
     })

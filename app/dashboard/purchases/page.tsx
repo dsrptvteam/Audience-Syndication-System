@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -200,7 +200,7 @@ export default function PurchasesPage() {
           message: data.error || "Upload failed",
         })
       }
-    } catch (error) {
+    } catch (_error) {
       setUploadResult({
         success: false,
         message: "Network error occurred",
