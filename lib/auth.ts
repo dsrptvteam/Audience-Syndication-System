@@ -1,10 +1,13 @@
 import { AuthOptions } from 'next-auth'
+import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import EmailProvider from 'next-auth/providers/email'
 import { Resend } from 'resend'
+import { prisma } from '@/lib/db'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export const authOptions: AuthOptions = {
+  adapter: PrismaAdapter(prisma),
   providers: [
     EmailProvider({
       from: process.env.EMAIL_FROM,
