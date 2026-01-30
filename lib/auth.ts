@@ -11,7 +11,9 @@ export const authOptions: AuthOptions = {
   providers: [
     EmailProvider({
       from: process.env.EMAIL_FROM,
+      maxAge: 24 * 60 * 60, // 24 hours
       sendVerificationRequest: async ({ identifier: email, url }) => {
+        console.log('Sending verification email to:', email)
         try {
           await resend.emails.send({
             from: process.env.EMAIL_FROM || 'noreply@example.com',
@@ -33,6 +35,7 @@ export const authOptions: AuthOptions = {
               </div>
             `,
           })
+          console.log('Verification email sent successfully')
         } catch (error) {
           console.error('Failed to send verification email:', error)
           throw new Error('Failed to send verification email')
@@ -71,4 +74,5 @@ export const authOptions: AuthOptions = {
     },
   },
   secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === 'development',
 }
