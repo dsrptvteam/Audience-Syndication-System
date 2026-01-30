@@ -200,7 +200,7 @@ export default function PurchasesPage() {
           message: data.error || "Upload failed",
         })
       }
-    } catch (_error) {
+    } catch {
       setUploadResult({
         success: false,
         message: "Network error occurred",
