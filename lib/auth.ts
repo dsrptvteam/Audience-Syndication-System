@@ -48,6 +48,15 @@ export const authOptions: AuthOptions = {
     signIn: '/auth/signin',
   },
   callbacks: {
+    async signIn() {
+      return true // Allow all sign-ins
+    },
+    async redirect({ url, baseUrl }) {
+      // Always redirect to dashboard after sign-in
+      if (url.startsWith('/')) return `${baseUrl}${url}`
+      else if (new URL(url).origin === baseUrl) return url
+      return `${baseUrl}/dashboard`
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
