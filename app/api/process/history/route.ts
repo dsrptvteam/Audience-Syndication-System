@@ -2,38 +2,46 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth, isSession } from '@/lib/auth-helper'
 
-const DEFAULT_LIMIT = 10
+const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
 
-interface HistoryEntry {
-  id: number
-  clientId: number
-  clientName: string
+interface ProcessingLog {
+  id: string
   fileName: string
-  status: string
-  recordsTotal: number
-  recordsNew: number
-  recordsUpdated: number
-  recordsSkipped: number
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  totalRecords: number | null
+  newRecords: number | null
+  duplicateRecords: number | null
   errorMessage: string | null
-  processedAt: Date
+  startedAt: string
+  completedAt: string | null
+  client: {
+    id: string
+    name: string
+  }
+}
+
+interface PaginationInfo {
+  page: number
+  limit: number
+  total: number
+  totalPages: number
 }
 
 interface HistoryResponse {
-  data: HistoryEntry[]
-  pagination: {
-    limit: number
-    total: number
-  }
+  logs: ProcessingLog[]
+  pagination: PaginationInfo
 }
 
 /**
  * GET /api/process/history
- * Returns recent file_processing_log entries for a client
+ * Returns file_processing_log entries with optional filtering
  *
  * Query params:
- * - clientId: Required, filter by client
- * - limit: Optional, max entries to return (default: 10, max: 100)
+ * - clientId: Optional, filter by client (omit or "all" for all clients)
+ * - status: Optional, filter by status (omit or "all" for all statuses)
+ * - page: Optional, page number (default: 1)
+ * - limit: Optional, entries per page (default: 20, max: 100)
  */
 export async function GET(
   request: NextRequest
@@ -47,25 +55,35 @@ export async function GET(
   try {
     const { searchParams } = new URL(request.url)
 
-    // Parse clientId (required)
+    // Parse clientId (optional - "all" or omitted means all clients)
     const clientIdParam = searchParams.get('clientId')
-    if (!clientIdParam) {
-      return NextResponse.json(
-        { error: 'clientId is required' },
-        { status: 400 }
-      )
+    let clientId: number | undefined
+    if (clientIdParam && clientIdParam !== 'all') {
+      const parsed = parseInt(clientIdParam, 10)
+      if (!isNaN(parsed) && parsed > 0) {
+        clientId = parsed
+      }
     }
 
-    const clientId = parseInt(clientIdParam, 10)
-    if (isNaN(clientId) || clientId < 1) {
-      return NextResponse.json(
-        { error: 'Invalid clientId' },
-        { status: 400 }
-      )
+    // Parse status filter (optional)
+    const statusParam = searchParams.get('status')
+    let status: string | undefined
+    if (statusParam && statusParam !== 'all') {
+      status = statusParam
     }
 
-    // Parse limit (optional)
+    // Parse pagination
+    const pageParam = searchParams.get('page')
     const limitParam = searchParams.get('limit')
+
+    let page = 1
+    if (pageParam) {
+      const parsedPage = parseInt(pageParam, 10)
+      if (!isNaN(parsedPage) && parsedPage > 0) {
+        page = parsedPage
+      }
+    }
+
     let limit = DEFAULT_LIMIT
     if (limitParam) {
       const parsedLimit = parseInt(limitParam, 10)
@@ -74,52 +92,63 @@ export async function GET(
       }
     }
 
-    // Verify client exists
-    const client = await prisma.client.findUnique({
-      where: { id: clientId },
-      select: { id: true, name: true },
-    })
-
-    if (!client) {
-      return NextResponse.json(
-        { error: 'Client not found' },
-        { status: 404 }
-      )
+    // Build where clause
+    const where: { clientId?: number; status?: string } = {}
+    if (clientId) {
+      where.clientId = clientId
+    }
+    if (status) {
+      where.status = status
     }
 
-    // Query file processing logs
+    // Calculate skip for pagination
+    const skip = (page - 1) * limit
+
+    // Query file processing logs with client info
     const [logs, total] = await Promise.all([
       prisma.fileProcessingLog.findMany({
-        where: { clientId },
+        where,
         orderBy: { processedAt: 'desc' },
+        skip,
         take: limit,
-        select: {
-          id: true,
-          clientId: true,
-          fileName: true,
-          status: true,
-          recordsTotal: true,
-          recordsNew: true,
-          recordsUpdated: true,
-          recordsSkipped: true,
-          errorMessage: true,
-          processedAt: true,
+        include: {
+          client: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       }),
-      prisma.fileProcessingLog.count({ where: { clientId } }),
+      prisma.fileProcessingLog.count({ where }),
     ])
 
-    // Add client name to each entry
-    const data: HistoryEntry[] = logs.map((log) => ({
-      ...log,
-      clientName: client.name,
+    // Transform to match UI expected format
+    const formattedLogs: ProcessingLog[] = logs.map((log) => ({
+      id: log.id.toString(),
+      fileName: log.fileName,
+      status: log.status as 'pending' | 'processing' | 'completed' | 'failed',
+      totalRecords: log.recordsTotal,
+      newRecords: log.recordsNew,
+      duplicateRecords: log.recordsSkipped + log.recordsUpdated,
+      errorMessage: log.errorMessage,
+      startedAt: log.createdAt.toISOString(),
+      completedAt: log.processedAt?.toISOString() || null,
+      client: {
+        id: log.client.id.toString(),
+        name: log.client.name,
+      },
     }))
 
+    const totalPages = Math.ceil(total / limit)
+
     return NextResponse.json({
-      data,
+      logs: formattedLogs,
       pagination: {
+        page,
         limit,
         total,
+        totalPages,
       },
     })
   } catch (error) {
