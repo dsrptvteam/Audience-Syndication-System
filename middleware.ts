@@ -5,8 +5,12 @@ import { getToken } from 'next-auth/jwt'
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Allow auth routes to pass through
-  if (pathname.startsWith('/api/auth') || pathname.startsWith('/auth')) {
+  // Allow auth routes and cron routes to pass through
+  if (
+    pathname.startsWith('/api/auth') ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/api/cron')
+  ) {
     return NextResponse.next()
   }
 
