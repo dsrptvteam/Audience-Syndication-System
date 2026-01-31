@@ -439,16 +439,51 @@ export async function removeFromCustomerList(
 
 /**
  * Formats Meta API errors for consistent messaging
+ * Enhanced to capture full error details from Facebook SDK
  */
 function formatMetaError(error: unknown): string {
-  if (error instanceof Error) {
-    // Check for Meta API error structure
-    const metaError = error as { error_user_msg?: string; error_user_title?: string; code?: number }
-    if (metaError.error_user_msg) {
-      return `[${metaError.code || 'UNKNOWN'}] ${metaError.error_user_msg}`
-    }
-    return error.message
+  // Log the full error structure for debugging
+  try {
+    console.error('Meta API Error (full):', JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
+  } catch {
+    console.error('Meta API Error (non-serializable):', error)
   }
+
+  if (error && typeof error === 'object') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fbError = error as any
+
+    // Facebook SDK error structure: error._error.error_user_msg
+    if (fbError._error?.error_user_msg) {
+      return `[${fbError._error.code || 'UNKNOWN'}] ${fbError._error.error_user_msg}`
+    }
+
+    // Alternative SDK structure: error._error.message
+    if (fbError._error?.message) {
+      return `[${fbError._error.code || 'UNKNOWN'}] ${fbError._error.message}`
+    }
+
+    // Response error structure: error.response.error.message
+    if (fbError.response?.error?.message) {
+      return `[${fbError.response.error.code || 'UNKNOWN'}] ${fbError.response.error.message}`
+    }
+
+    // Body error structure: error.body.error.message
+    if (fbError.body?.error?.message) {
+      return `[${fbError.body.error.code || 'UNKNOWN'}] ${fbError.body.error.message}`
+    }
+
+    // Direct error properties
+    if (fbError.error_user_msg) {
+      return `[${fbError.code || 'UNKNOWN'}] ${fbError.error_user_msg}`
+    }
+
+    // Standard Error with message
+    if (fbError.message) {
+      return fbError.message
+    }
+  }
+
   return 'Unknown Meta API error'
 }
 
