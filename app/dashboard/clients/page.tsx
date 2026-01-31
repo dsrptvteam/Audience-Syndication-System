@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Plus, Search, Play, Loader2, AlertTriangle } from 'lucide-react'
+import { Plus, Search, Play, Loader2, AlertTriangle, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -49,6 +49,14 @@ interface ProcessResult {
   error?: string
 }
 
+interface SyncResult {
+  success: boolean
+  message?: string
+  audienceId?: string
+  recordsSynced?: number
+  error?: string
+}
+
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
@@ -57,6 +65,8 @@ export default function ClientsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [processingClientId, setProcessingClientId] = useState<number | null>(null)
   const [processResult, setProcessResult] = useState<ProcessResult | null>(null)
+  const [syncingClientId, setSyncingClientId] = useState<number | null>(null)
+  const [syncResult, setSyncResult] = useState<SyncResult | null>(null)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -184,6 +194,46 @@ export default function ClientsPage() {
     }
   }
 
+  const handleMetaSync = async (clientId: number) => {
+    setSyncingClientId(clientId)
+    setSyncResult(null)
+
+    try {
+      const response = await fetch('/api/meta/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ clientId }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setSyncResult({
+          success: false,
+          error: data.error || 'Meta sync failed',
+        })
+      } else {
+        setSyncResult({
+          success: true,
+          message: data.message,
+          audienceId: data.audienceId,
+          recordsSynced: data.recordsSynced,
+        })
+        // Refresh to show updated data
+        fetchClients()
+      }
+    } catch (err) {
+      setSyncResult({
+        success: false,
+        error: err instanceof Error ? err.message : 'An error occurred',
+      })
+    } finally {
+      setSyncingClientId(null)
+    }
+  }
+
   const filteredClients = clients.filter((client) =>
     client.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
@@ -228,6 +278,38 @@ export default function ClientsPage() {
           )}
           <button
             onClick={() => setProcessResult(null)}
+            className="mt-2 text-xs underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Sync Result Toast */}
+      {syncResult && (
+        <div
+          className={`rounded-lg border p-4 ${
+            syncResult.success
+              ? 'border-blue-500 bg-blue-50'
+              : 'border-destructive bg-destructive/10'
+          }`}
+        >
+          {syncResult.success ? (
+            <div>
+              <p className="font-medium text-blue-800">Meta Sync Complete</p>
+              <p className="text-sm text-blue-700">
+                {syncResult.message} | {syncResult.recordsSynced} records synced
+                {syncResult.audienceId && ` | Audience ID: ${syncResult.audienceId}`}
+              </p>
+            </div>
+          ) : (
+            <div>
+              <p className="font-medium text-destructive">Meta Sync Failed</p>
+              <p className="text-sm text-destructive">{syncResult.error}</p>
+            </div>
+          )}
+          <button
+            onClick={() => setSyncResult(null)}
             className="mt-2 text-xs underline"
           >
             Dismiss
@@ -436,19 +518,34 @@ export default function ClientsPage() {
                     {new Date(client.updatedAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleProcess(client.id)}
-                      disabled={processingClientId === client.id || !client.isActive}
-                    >
-                      {processingClientId === client.id ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Play className="mr-2 h-4 w-4" />
-                      )}
-                      Process
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleProcess(client.id)}
+                        disabled={processingClientId === client.id || !client.isActive}
+                      >
+                        {processingClientId === client.id ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Play className="mr-2 h-4 w-4" />
+                        )}
+                        Process
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleMetaSync(client.id)}
+                        disabled={syncingClientId === client.id || !client.isActive}
+                      >
+                        {syncingClientId === client.id ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Upload className="mr-2 h-4 w-4" />
+                        )}
+                        Sync to Meta
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
