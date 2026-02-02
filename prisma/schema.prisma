@@ -38,18 +38,19 @@ model Client {
 // Audience members table
 // ================================
 model AudienceMember {
-  id           Int      @id @default(autoincrement())
-  clientId     Int
-  email        String?
-  phone        String?
-  firstName    String?
-  lastName     String?
-  dateAdded    DateTime @default(now())
+  id            Int      @id @default(autoincrement())
+  clientId      Int
+  email         String?
+  phone         String?
+  firstName     String?
+  lastName      String?
+  dateAdded     DateTime @default(now())
   daysRemaining Int      @default(180)
-  sourceFile   String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  status        String   @default("ACTIVE") // ACTIVE, NO_IDENTIFIER, EXPIRED
+  sourceFile    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([email])
   @@index([phone])
@@ -57,6 +58,7 @@ model AudienceMember {
   @@index([dateAdded])
   @@index([daysRemaining])
   @@index([clientId])
+  @@index([status])
   @@map("audience_members")
 }
 
@@ -64,17 +66,19 @@ model AudienceMember {
 // File processing log table
 // ================================
 model FileProcessingLog {
-  id             Int      @id @default(autoincrement())
-  clientId       Int
-  fileName       String
-  recordsTotal   Int      @default(0)
-  recordsNew     Int      @default(0)
-  recordsUpdated Int      @default(0)
-  recordsSkipped Int      @default(0)
-  status         String   @default("pending") // pending, processing, completed, failed
-  errorMessage   String?
-  processedAt    DateTime @default(now())
-  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  id                  Int      @id @default(autoincrement())
+  clientId            Int
+  fileName            String
+  recordsTotal        Int      @default(0)
+  recordsNew          Int      @default(0)
+  recordsUpdated      Int      @default(0)
+  recordsSkipped      Int      @default(0)
+  recordsNoIdentifier Int      @default(0) // Records missing both email and phone
+  status              String   @default("pending") // pending, processing, completed, failed
+  errorMessage        String?
+  createdAt           DateTime @default(now())
+  processedAt         DateTime @default(now())
+  client              Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([clientId])
   @@index([processedAt])
