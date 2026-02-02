@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Select,
@@ -21,7 +22,15 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search, ChevronLeft, ChevronRight, Users } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Search, ChevronLeft, ChevronRight, Users, Pencil, Loader2, XCircle, CheckCircle } from "lucide-react"
 
 interface AudienceMember {
   id: number
@@ -62,6 +71,19 @@ export default function AudiencePage() {
   const [selectedClient, setSelectedClient] = useState<string>("all")
   const [loading, setLoading] = useState(true)
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
+
+  // Edit modal state
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [editingMember, setEditingMember] = useState<AudienceMember | null>(null)
+  const [editForm, setEditForm] = useState({
+    email: "",
+    phone: "",
+    firstName: "",
+    lastName: "",
+  })
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const fetchClients = async () => {
     try {
@@ -155,6 +177,55 @@ export default function AudiencePage() {
     return phone
   }
 
+  const openEditModal = (member: AudienceMember) => {
+    setEditingMember(member)
+    setEditForm({
+      email: member.email || "",
+      phone: member.phone || "",
+      firstName: member.firstName || "",
+      lastName: member.lastName || "",
+    })
+    setSaveError(null)
+    setEditModalOpen(true)
+  }
+
+  const handleSave = async () => {
+    if (!editingMember) return
+
+    setSaving(true)
+    setSaveError(null)
+
+    try {
+      const response = await fetch(`/api/audience/${editingMember.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: editForm.email.trim() || null,
+          phone: editForm.phone.trim() || null,
+          firstName: editForm.firstName.trim() || null,
+          lastName: editForm.lastName.trim() || null,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setEditModalOpen(false)
+        setSuccessMessage(data.message || "Record updated successfully")
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccessMessage(null), 3000)
+        // Refresh the list
+        fetchAudience(pagination.page, search, selectedClient)
+      } else {
+        const data = await response.json()
+        setSaveError(data.error || "Failed to save changes")
+      }
+    } catch {
+      setSaveError("Network error occurred")
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -163,6 +234,14 @@ export default function AudiencePage() {
           View and search all audience members across clients
         </p>
       </div>
+
+      {/* Success Toast */}
+      {successMessage && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-green-100 text-green-800 px-4 py-3 rounded-lg shadow-lg">
+          <CheckCircle className="h-5 w-5" />
+          {successMessage}
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -229,6 +308,7 @@ export default function AudiencePage() {
                     <TableHead>Client</TableHead>
                     <TableHead>Days Remaining</TableHead>
                     <TableHead>Added</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -245,6 +325,15 @@ export default function AudiencePage() {
                       <TableCell>{getDaysRemainingBadge(member.daysRemaining)}</TableCell>
                       <TableCell className="text-muted-foreground">
                         {formatDate(member.dateAdded)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditModal(member)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -287,6 +376,83 @@ export default function AudiencePage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Modal */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Audience Member</DialogTitle>
+            <DialogDescription>
+              Update the details for this audience member
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  value={editForm.firstName}
+                  onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  value={editForm.lastName}
+                  onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                placeholder="john@example.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                value={editForm.phone}
+                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                placeholder="5551234567"
+              />
+            </div>
+
+            {saveError && (
+              <div className="flex items-center gap-2 text-destructive text-sm">
+                <XCircle className="h-4 w-4" />
+                {saveError}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
