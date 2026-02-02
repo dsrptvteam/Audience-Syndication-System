@@ -10,6 +10,8 @@ import {
   Building2,
   History,
   Upload,
+  FileUp,
+  AlertTriangle,
   Menu,
   X,
   LogOut,
@@ -49,6 +51,16 @@ const navItems: NavItem[] = [
     title: 'Purchase Upload',
     href: '/dashboard/purchases',
     icon: <Upload className="h-5 w-5" />,
+  },
+  {
+    title: 'Manual Upload',
+    href: '/dashboard/upload',
+    icon: <FileUp className="h-5 w-5" />,
+  },
+  {
+    title: 'Data Quality',
+    href: '/dashboard/data-quality',
+    icon: <AlertTriangle className="h-5 w-5" />,
   },
 ]
 
