@@ -27,12 +27,40 @@ const HEADER_MAPPINGS: Record<keyof HeaderMapping, string[]> = {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 /**
- * Normalizes a phone number by removing all non-digit characters
+ * Normalizes a phone number by removing all non-digit characters and adding country code
  * @param phone - Raw phone string
- * @returns Phone with only digits (0-9)
+ * @param defaultCountryCode - Country code to prepend (default: '1' for US/Canada)
+ * @returns Phone with country code, or null if invalid
+ *
+ * Examples:
+ * - (202) 555-1234 -> 12025551234
+ * - 2025551234 -> 12025551234
+ * - +1 202 555 1234 -> 12025551234
+ * - 12025551234 -> 12025551234 (no change)
+ * - 555-1234 -> null (too short, incomplete)
  */
-export function normalizePhone(phone: string): string {
-  return phone.replace(/\D/g, '')
+export function normalizePhone(phone: string, defaultCountryCode: string = '1'): string | null {
+  // Remove all non-digit characters
+  const digitsOnly = phone.replace(/\D/g, '')
+
+  // Handle invalid/incomplete numbers
+  if (digitsOnly.length < 7) {
+    return null // Too short to be a valid phone number
+  }
+
+  // If number already has country code (11+ digits), keep as-is
+  if (digitsOnly.length >= 11) {
+    return digitsOnly
+  }
+
+  // If number is exactly 10 digits, prepend country code
+  if (digitsOnly.length === 10) {
+    return defaultCountryCode + digitsOnly
+  }
+
+  // For 7-9 digit numbers, prepend country code
+  // (These might be local numbers or partial entries)
+  return defaultCountryCode + digitsOnly
 }
 
 /**
@@ -166,7 +194,7 @@ export function parseCSV(csvContent: string): ParsedRecord[] {
     let phone: string | null = null
     if (rawPhone && rawPhone.trim()) {
       const normalizedPhone = normalizePhone(rawPhone)
-      if (normalizedPhone.length > 0) {
+      if (normalizedPhone !== null) {
         phone = normalizedPhone
       }
     }

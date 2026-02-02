@@ -76,18 +76,16 @@ function normalizeAndHashEmail(email: string): string {
 }
 
 /**
- * Normalizes and hashes a phone number (digits only)
- * @param phone - Raw phone number
- * @returns Hashed normalized phone
+ * Normalizes and hashes a phone number
+ * Note: Phone numbers should already include country code from csv-parser.normalizePhone()
+ * @param phone - Normalized phone number with country code (e.g., "12025551234")
+ * @returns Hashed phone number
  */
 function normalizeAndHashPhone(phone: string): string {
-  // Remove all non-digits and any leading country codes
+  // Phone already normalized with country code from csv-parser
+  // Just remove any non-digits (shouldn't be any, but defensive)
   const digitsOnly = phone.replace(/\D/g, '')
-  // Remove leading 1 for US numbers if present and length > 10
-  const normalized = digitsOnly.length === 11 && digitsOnly.startsWith('1')
-    ? digitsOnly.slice(1)
-    : digitsOnly
-  return hashValue(normalized)
+  return hashValue(digitsOnly)
 }
 
 /**
