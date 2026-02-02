@@ -36,7 +36,7 @@ export async function GET() {
       },
     })
 
-    return NextResponse.json(clients)
+    return NextResponse.json({ clients })
   } catch (error) {
     console.error('Error fetching clients:', error)
     return NextResponse.json(
