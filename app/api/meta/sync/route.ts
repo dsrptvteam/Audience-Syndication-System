@@ -18,7 +18,7 @@ const syncRequestSchema = z.object({
 
 interface SyncResponse {
   success: boolean
-  audienceId: string
+  audienceId: string | null
   audienceName: string
   recordsSynced: number
   syncTime: number
@@ -229,7 +229,7 @@ export async function POST(
     }
 
     // Step 4: Format audience data
-    const formattedMembers: AudienceMember[] = audienceMembers.map((m) => ({
+    const formattedMembers: AudienceMember[] = audienceMembers.map((m: (typeof audienceMembers)[number]) => ({
       email: m.email,
       phone: m.phone,
       firstName: m.firstName || '',
@@ -239,6 +239,13 @@ export async function POST(
     const formattedData = formatAudienceData(formattedMembers)
 
     // Step 5: Upload to Meta
+    if (!audienceId) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to get or create audience ID' },
+        { status: 500 }
+      )
+    }
+
     try {
       const uploadResult = await uploadToCustomerList(
         audienceId,

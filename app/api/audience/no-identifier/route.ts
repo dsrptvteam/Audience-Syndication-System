@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
     const totalPages = Math.ceil(total / limit)
 
     // Transform response
-    const data = members.map((m) => ({
+    const data = members.map((m: (typeof members)[number]) => ({
       id: m.id.toString(),
       firstName: m.firstName,
       lastName: m.lastName,
