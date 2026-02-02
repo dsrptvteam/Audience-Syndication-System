@@ -12,7 +12,24 @@ export interface ProcessingResult {
   newRecords: number
   duplicates: number
   updated: number
+  noIdentifier: number
   errors: string[]
+}
+
+// Status constants for audience members
+export const AUDIENCE_STATUS = {
+  ACTIVE: 'ACTIVE',
+  NO_IDENTIFIER: 'NO_IDENTIFIER',
+  EXPIRED: 'EXPIRED',
+} as const
+
+/**
+ * Determines the status for an audience member based on identifiers
+ */
+function getRecordStatus(email: string | null | undefined, phone: string | null | undefined): string {
+  const hasEmail = email && email.trim().length > 0
+  const hasPhone = phone && phone.trim().length > 0
+  return hasEmail || hasPhone ? AUDIENCE_STATUS.ACTIVE : AUDIENCE_STATUS.NO_IDENTIFIER
 }
 
 const DAYS_REMAINING_DEFAULT = 30
@@ -115,6 +132,7 @@ export async function processRecords(
     newRecords: 0,
     duplicates: 0,
     updated: 0,
+    noIdentifier: 0,
     errors: [],
   }
 
@@ -180,9 +198,15 @@ async function processIndividualRecords(
 
     try {
       const dedupResult = await deduplicateRecord(record, clientId)
+      const status = getRecordStatus(record.email, record.phone)
+
+      // Track records without identifiers
+      if (status === AUDIENCE_STATUS.NO_IDENTIFIER) {
+        result.noIdentifier++
+      }
 
       if (dedupResult.isNew) {
-        // Insert new record
+        // Insert new record with status
         await prisma.audienceMember.create({
           data: {
             clientId,
@@ -192,12 +216,13 @@ async function processIndividualRecords(
             phone: record.phone,
             dateAdded: today,
             daysRemaining: DAYS_REMAINING_DEFAULT,
+            status,
             sourceFile: sourceFile || null,
           },
         })
         result.newRecords++
       } else {
-        // Update existing record
+        // Update existing record with status
         await prisma.audienceMember.update({
           where: { id: dedupResult.audienceMemberId! },
           data: {
@@ -206,6 +231,7 @@ async function processIndividualRecords(
             phone: record.phone,
             firstName: record.firstName,
             lastName: record.lastName,
+            status,
             updatedAt: today,
           },
         })
@@ -238,22 +264,29 @@ async function processBatchedRecords(
   result: ProcessingResult
 ): Promise<void> {
   // First, deduplicate all records to categorize them
-  const newRecords: ParsedRecord[] = []
-  const updateRecords: Array<{ record: ParsedRecord; audienceMemberId: number; matchedOn: string }> = []
+  const newRecords: Array<{ record: ParsedRecord; status: string }> = []
+  const updateRecords: Array<{ record: ParsedRecord; audienceMemberId: number; matchedOn: string; status: string }> = []
 
   for (let i = 0; i < records.length; i++) {
     const record = records[i]
 
     try {
       const dedupResult = await deduplicateRecord(record, clientId)
+      const status = getRecordStatus(record.email, record.phone)
+
+      // Track records without identifiers
+      if (status === AUDIENCE_STATUS.NO_IDENTIFIER) {
+        result.noIdentifier++
+      }
 
       if (dedupResult.isNew) {
-        newRecords.push(record)
+        newRecords.push({ record, status })
       } else {
         updateRecords.push({
           record,
           audienceMemberId: dedupResult.audienceMemberId!,
           matchedOn: dedupResult.matchedOn || 'unknown',
+          status,
         })
       }
     } catch (error) {
@@ -266,7 +299,7 @@ async function processBatchedRecords(
   if (newRecords.length > 0) {
     try {
       await prisma.audienceMember.createMany({
-        data: newRecords.map((record) => ({
+        data: newRecords.map(({ record, status }) => ({
           clientId,
           firstName: record.firstName,
           lastName: record.lastName,
@@ -274,6 +307,7 @@ async function processBatchedRecords(
           phone: record.phone,
           dateAdded: today,
           daysRemaining: DAYS_REMAINING_DEFAULT,
+          status,
           sourceFile: sourceFile || null,
         })),
         skipDuplicates: true,
@@ -291,7 +325,7 @@ async function processBatchedRecords(
 
     try {
       await prisma.$transaction(
-        batch.map(({ record, audienceMemberId }) =>
+        batch.map(({ record, audienceMemberId, status }) =>
           prisma.audienceMember.update({
             where: { id: audienceMemberId },
             data: {
@@ -300,6 +334,7 @@ async function processBatchedRecords(
               phone: record.phone,
               firstName: record.firstName,
               lastName: record.lastName,
+              status,
               updatedAt: today,
             },
           })

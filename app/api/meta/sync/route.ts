@@ -94,10 +94,11 @@ export async function POST(
       timestamp: new Date().toISOString(),
     })
 
-    // Step 2: Fetch all active audience members (daysRemaining > 0)
+    // Step 2: Fetch all active audience members (status = ACTIVE and daysRemaining > 0)
     const audienceMembers = await prisma.audienceMember.findMany({
       where: {
         clientId,
+        status: 'ACTIVE', // Only sync records with valid identifiers
         daysRemaining: {
           gt: 0,
         },

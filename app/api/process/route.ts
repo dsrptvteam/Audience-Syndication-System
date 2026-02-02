@@ -19,6 +19,7 @@ interface ProcessResponse {
   newRecords: number
   duplicates: number
   updated: number
+  noIdentifier: number
   processingTime: number
 }
 
@@ -223,6 +224,7 @@ export async function POST(
         recordsNew: processingResult.newRecords,
         recordsUpdated: processingResult.updated,
         recordsSkipped: processingResult.duplicates - processingResult.updated,
+        recordsNoIdentifier: processingResult.noIdentifier,
         errorMessage: processingResult.errors.length > 0
           ? processingResult.errors.join('; ')
           : null,
@@ -246,6 +248,7 @@ export async function POST(
       newRecords: processingResult.newRecords,
       duplicates: processingResult.duplicates,
       updated: processingResult.updated,
+      noIdentifier: processingResult.noIdentifier,
       processingTime,
     })
   } catch (error) {

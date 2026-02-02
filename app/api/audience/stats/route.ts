@@ -19,35 +19,53 @@ export async function GET() {
     today.setHours(0, 0, 0, 0)
 
     // Execute all queries in parallel for efficiency
+    // Only count ACTIVE status records (those with valid identifiers)
     const [
       totalActive,
+      totalNoIdentifier,
       byClient,
       expiringSoon,
       addedToday,
     ] = await Promise.all([
-      // Total active audience members
-      prisma.audienceMember.count(),
+      // Total active audience members (with valid identifiers)
+      prisma.audienceMember.count({
+        where: {
+          status: 'ACTIVE',
+        },
+      }),
 
-      // Total by client (breakdown)
+      // Total records without identifiers (for data quality reporting)
+      prisma.audienceMember.count({
+        where: {
+          status: 'NO_IDENTIFIER',
+        },
+      }),
+
+      // Total by client (breakdown) - only ACTIVE records
       prisma.audienceMember.groupBy({
         by: ['clientId'],
+        where: {
+          status: 'ACTIVE',
+        },
         _count: {
           id: true,
         },
       }),
 
-      // Members expiring soon (daysRemaining < 7)
+      // Members expiring soon (daysRemaining < 7) - only ACTIVE
       prisma.audienceMember.count({
         where: {
+          status: 'ACTIVE',
           daysRemaining: {
             lt: 7,
           },
         },
       }),
 
-      // Members added today
+      // Members added today - only ACTIVE
       prisma.audienceMember.count({
         where: {
+          status: 'ACTIVE',
           dateAdded: {
             gte: today,
           },
@@ -79,6 +97,7 @@ export async function GET() {
 
     return NextResponse.json({
       totalActive,
+      totalNoIdentifier,
       byClient: byClientWithNames,
       expiringSoon,
       addedToday,

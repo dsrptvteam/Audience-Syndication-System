@@ -15,6 +15,7 @@ const DEFAULT_LIMIT = 20
  * - limit: Items per page (default: 20, max: 100)
  * - clientId: Filter by client ID
  * - search: Search in firstName, lastName, email, phone
+ * - status: Filter by status (ACTIVE, NO_IDENTIFIER, EXPIRED, or 'all' for all statuses)
  */
 export async function GET(request: NextRequest) {
   // Check authentication
@@ -34,6 +35,9 @@ export async function GET(request: NextRequest) {
       search: searchParams.get('search') || undefined,
     }
 
+    // Parse status filter (default to ACTIVE, 'all' shows all statuses)
+    const statusParam = searchParams.get('status')
+
     // Validate parameters
     const validationResult = audienceSearchSchema.safeParse(rawParams)
     if (!validationResult.success) {
@@ -48,6 +52,7 @@ export async function GET(request: NextRequest) {
     // Build where clause for filtering
     const where: {
       clientId?: number
+      status?: string
       OR?: Array<{
         email?: { contains: string; mode: 'insensitive' }
         phone?: { contains: string }
@@ -59,6 +64,11 @@ export async function GET(request: NextRequest) {
     // Filter by client if provided
     if (clientId) {
       where.clientId = clientId
+    }
+
+    // Filter by status (default to ACTIVE unless 'all' is specified)
+    if (statusParam !== 'all') {
+      where.status = statusParam || 'ACTIVE'
     }
 
     // Search across multiple fields if search query provided
