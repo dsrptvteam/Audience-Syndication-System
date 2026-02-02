@@ -15,10 +15,37 @@ export async function GET() {
 
   try {
     // Execute all queries in parallel
-    const [total, byClient, oldestRecord] = await Promise.all([
+    const [total, missingEmailOnly, missingPhoneOnly, missingBoth, byClient, oldestRecord] = await Promise.all([
       // Total NO_IDENTIFIER records
       prisma.audienceMember.count({
         where: { status: 'NO_IDENTIFIER' },
+      }),
+
+      // Missing Email Only (has phone, no email)
+      prisma.audienceMember.count({
+        where: {
+          status: 'NO_IDENTIFIER',
+          email: null,
+          phone: { not: null },
+        },
+      }),
+
+      // Missing Phone Only (has email, no phone)
+      prisma.audienceMember.count({
+        where: {
+          status: 'NO_IDENTIFIER',
+          phone: null,
+          email: { not: null },
+        },
+      }),
+
+      // Missing Both (neither email nor phone)
+      prisma.audienceMember.count({
+        where: {
+          status: 'NO_IDENTIFIER',
+          email: null,
+          phone: null,
+        },
       }),
 
       // Count by client
@@ -55,10 +82,18 @@ export async function GET() {
     // Sort by count descending
     byClientWithNames.sort((a: (typeof byClientWithNames)[number], b: (typeof byClientWithNames)[number]) => b.count - a.count)
 
+    // Validate breakdown totals match
+    const breakdownSum = missingEmailOnly + missingPhoneOnly + missingBoth
+    const isValid = breakdownSum === total
+
     return NextResponse.json({
       total,
+      missingEmailOnly,
+      missingPhoneOnly,
+      missingBoth,
       byClient: byClientWithNames,
       oldestDate: oldestRecord?.dateAdded?.toISOString() || null,
+      breakdownValid: isValid,
     })
   } catch (error) {
     console.error('Error fetching no-identifier stats:', error)

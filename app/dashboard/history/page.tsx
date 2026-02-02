@@ -35,6 +35,7 @@ interface ProcessingLog {
   status: "pending" | "processing" | "completed" | "failed"
   totalRecords: number | null
   newRecords: number | null
+  updatedRecords: number | null
   duplicateRecords: number | null
   errorMessage: string | null
   startedAt: string
@@ -255,7 +256,8 @@ export default function HistoryPage() {
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Records</TableHead>
                     <TableHead className="text-right">New</TableHead>
-                    <TableHead className="text-right">Duplicates</TableHead>
+                    <TableHead className="text-right">Updated</TableHead>
+                    <TableHead className="text-right">Skipped</TableHead>
                     <TableHead>Duration</TableHead>
                     <TableHead>Started</TableHead>
                   </TableRow>
@@ -279,6 +281,11 @@ export default function HistoryPage() {
                       </TableCell>
                       <TableCell className="text-right text-green-600">
                         {log.newRecords?.toLocaleString() ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-right text-blue-600">
+                        {log.updatedRecords && log.updatedRecords > 0
+                          ? log.updatedRecords.toLocaleString()
+                          : "—"}
                       </TableCell>
                       <TableCell className="text-right text-muted-foreground">
                         {log.duplicateRecords?.toLocaleString() ?? "—"}

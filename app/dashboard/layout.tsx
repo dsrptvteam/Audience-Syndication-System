@@ -16,6 +16,7 @@ import {
   X,
   LogOut,
   ChevronRight,
+  UserCog,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -61,6 +62,11 @@ const navItems: NavItem[] = [
     title: 'Data Quality',
     href: '/dashboard/data-quality',
     icon: <AlertTriangle className="h-5 w-5" />,
+  },
+  {
+    title: 'Users',
+    href: '/dashboard/users',
+    icon: <UserCog className="h-5 w-5" />,
   },
 ]
 
