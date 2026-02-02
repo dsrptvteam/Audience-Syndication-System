@@ -82,8 +82,12 @@ interface PaginationInfo {
 
 interface Stats {
   total: number
+  missingEmailOnly: number
+  missingPhoneOnly: number
+  missingBoth: number
   byClient: Array<{ clientId: number; clientName: string; count: number }>
   oldestDate: string | null
+  breakdownValid: boolean
 }
 
 export default function DataQualityPage() {
@@ -380,20 +384,25 @@ export default function DataQualityPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total No-Identifier Records
+              Total No-Identifier
             </CardTitle>
           </CardHeader>
           <CardContent>
             {statsLoading ? (
               <Skeleton className="h-8 w-20" />
             ) : (
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                <span className="text-2xl font-bold">{stats?.total || 0}</span>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-gray-500" />
+                  <span className="text-2xl font-bold">{stats?.total || 0}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  All records without identifiers
+                </p>
               </div>
             )}
           </CardContent>
@@ -402,25 +411,22 @@ export default function DataQualityPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              By Client
+              Missing Email Only
             </CardTitle>
           </CardHeader>
           <CardContent>
             {statsLoading ? (
-              <Skeleton className="h-8 w-full" />
-            ) : stats?.byClient && stats.byClient.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {stats.byClient.slice(0, 3).map((c) => (
-                  <Badge key={c.clientId} variant="secondary">
-                    {c.clientName}: {c.count}
-                  </Badge>
-                ))}
-                {stats.byClient.length > 3 && (
-                  <Badge variant="outline">+{stats.byClient.length - 3} more</Badge>
-                )}
-              </div>
+              <Skeleton className="h-8 w-20" />
             ) : (
-              <span className="text-muted-foreground">No data</span>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-orange-500" />
+                  <span className="text-2xl font-bold">{stats?.missingEmailOnly || 0}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Has phone, no email
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -428,20 +434,63 @@ export default function DataQualityPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Oldest Record
+              Missing Phone Only
             </CardTitle>
           </CardHeader>
           <CardContent>
             {statsLoading ? (
-              <Skeleton className="h-8 w-32" />
+              <Skeleton className="h-8 w-20" />
             ) : (
-              <span className="text-2xl font-bold">
-                {stats?.oldestDate ? formatDate(stats.oldestDate) : "N/A"}
-              </span>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-orange-500" />
+                  <span className="text-2xl font-bold">{stats?.missingPhoneOnly || 0}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Has email, no phone
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Missing Both
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {statsLoading ? (
+              <Skeleton className="h-8 w-20" />
+            ) : (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-red-500" />
+                  <span className="text-2xl font-bold">{stats?.missingBoth || 0}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  No email or phone
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Validation Warning */}
+      {stats && !stats.breakdownValid && (
+        <Card className="border-yellow-500 bg-yellow-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-yellow-700">
+              <AlertTriangle className="h-5 w-5" />
+              <span className="text-sm font-medium">
+                Warning: Breakdown totals don&apos;t match. Total: {stats.total}, Sum: {stats.missingEmailOnly + stats.missingPhoneOnly + stats.missingBoth}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Main Table Card */}
       <Card>
