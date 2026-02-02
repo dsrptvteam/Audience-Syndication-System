@@ -78,12 +78,19 @@ export const authOptions: AuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
+        // Fetch isActive status when user first signs in
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { isActive: true },
+        })
+        token.isActive = dbUser?.isActive ?? true
       }
       return token
     },
     async session({ session, token }) {
       if (session.user && token.id) {
-        (session.user as { id?: string }).id = token.id as string
+        (session.user as { id?: string; isActive?: boolean }).id = token.id as string;
+        (session.user as { id?: string; isActive?: boolean }).isActive = token.isActive as boolean
       }
       return session
     },

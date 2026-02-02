@@ -27,6 +27,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(signInUrl)
   }
 
+  // Check if user is active
+  // Note: isActive is added to JWT in auth.ts callbacks
+  if (token.isActive === false) {
+    const inactiveUrl = new URL('/auth/inactive', request.url)
+    return NextResponse.redirect(inactiveUrl)
+  }
+
   return NextResponse.next()
 }
 

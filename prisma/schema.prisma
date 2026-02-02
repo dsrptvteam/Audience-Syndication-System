@@ -180,6 +180,8 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
 
   accounts Account[]
   sessions Session[]
