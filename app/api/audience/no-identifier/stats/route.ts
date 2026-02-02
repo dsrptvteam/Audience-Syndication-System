@@ -37,23 +37,23 @@ export async function GET() {
     ])
 
     // Get client names
-    const clientIds = byClient.map((c) => c.clientId)
+    const clientIds = byClient.map((c: (typeof byClient)[number]) => c.clientId)
     const clients = await prisma.client.findMany({
       where: { id: { in: clientIds } },
       select: { id: true, name: true },
     })
 
-    const clientMap = new Map(clients.map((c) => [c.id, c.name]))
+    const clientMap = new Map(clients.map((c: (typeof clients)[number]) => [c.id, c.name]))
 
     // Format byClient with names
-    const byClientWithNames = byClient.map((item) => ({
+    const byClientWithNames = byClient.map((item: (typeof byClient)[number]) => ({
       clientId: item.clientId,
       clientName: clientMap.get(item.clientId) || 'Unknown',
       count: item._count.id,
     }))
 
     // Sort by count descending
-    byClientWithNames.sort((a, b) => b.count - a.count)
+    byClientWithNames.sort((a: (typeof byClientWithNames)[number], b: (typeof byClientWithNames)[number]) => b.count - a.count)
 
     return NextResponse.json({
       total,

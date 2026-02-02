@@ -124,7 +124,7 @@ export async function GET(
     ])
 
     // Transform to match UI expected format
-    const formattedLogs: ProcessingLog[] = logs.map((log) => ({
+    const formattedLogs: ProcessingLog[] = logs.map((log: (typeof logs)[number]) => ({
       id: log.id.toString(),
       fileName: log.fileName,
       status: log.status as 'pending' | 'processing' | 'completed' | 'failed',
