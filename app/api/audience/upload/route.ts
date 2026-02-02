@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { requireAuth, isSession } from '@/lib/auth-helper'
 import { parseCSV } from '@/lib/csv-parser'
 import { processRecords } from '@/lib/deduplication'
+import { batchProcessWithMatch } from '@/lib/match-append'
 import { safeLog } from '@/lib/logger'
 
 interface UploadResponse {
@@ -43,6 +44,7 @@ export async function POST(
     const formData = await request.formData()
     const file = formData.get('file') as File | null
     const clientIdStr = formData.get('clientId') as string | null
+    const mode = (formData.get('mode') as string | null) || 'append' // Default to append mode
 
     if (!file) {
       return NextResponse.json(
@@ -62,6 +64,14 @@ export async function POST(
     if (isNaN(clientId) || clientId < 1) {
       return NextResponse.json(
         { success: false, error: 'Invalid client ID' },
+        { status: 400 }
+      )
+    }
+
+    // Validate mode
+    if (mode !== 'append' && mode !== 'update') {
+      return NextResponse.json(
+        { success: false, error: 'Invalid mode. Must be "append" or "update"' },
         { status: 400 }
       )
     }
@@ -180,18 +190,28 @@ export async function POST(
       event: 'manual_upload_processing',
       clientName: client.name,
       filename: file.name,
+      mode,
       recordsFound: parsedRecords.length,
       timestamp: new Date().toISOString(),
     })
 
-    // Process records using existing deduplication logic
+    // Process records using match-append logic
     let processingResult
     try {
-      processingResult = await processRecords(
-        parsedRecords,
+      const matchAppendResult = await batchProcessWithMatch(parsedRecords, {
+        mode: mode as 'append' | 'update',
         clientId,
-        `MANUAL_UPLOAD: ${file.name}`
-      )
+        sourceFile: `MANUAL_UPLOAD: ${file.name}`,
+      })
+
+      // Convert to format expected by the rest of the code
+      processingResult = {
+        newRecords: matchAppendResult.created,
+        updated: matchAppendResult.updated,
+        duplicates: matchAppendResult.skipped,
+        noIdentifier: matchAppendResult.noIdentifier,
+        errors: matchAppendResult.errors,
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Processing failed'
 

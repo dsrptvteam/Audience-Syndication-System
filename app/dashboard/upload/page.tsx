@@ -43,6 +43,7 @@ export default function ManualUploadPage() {
   const [clients, setClients] = useState<Client[]>([])
   const [selectedClient, setSelectedClient] = useState<string>("")
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [mode, setMode] = useState<'append' | 'update'>('append')
   const [isDragging, setIsDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null)
@@ -113,6 +114,7 @@ export default function ManualUploadPage() {
       const formData = new FormData()
       formData.append("file", selectedFile)
       formData.append("clientId", selectedClient)
+      formData.append("mode", mode)
 
       const response = await fetch("/api/audience/upload", {
         method: "POST",
@@ -189,6 +191,35 @@ export default function ManualUploadPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Mode Selector */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Upload Mode</label>
+              <Select value={mode} onValueChange={(value) => setMode(value as 'append' | 'update')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="append">
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">Append Only</span>
+                      <span className="text-xs text-muted-foreground">Skip existing records (default)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="update">
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">Match & Update</span>
+                      <span className="text-xs text-muted-foreground">Update existing records when found</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                {mode === 'append'
+                  ? 'Existing records will be skipped to avoid duplicates'
+                  : 'Existing records will be updated with new data when email or phone matches'}
+              </p>
             </div>
 
             {/* File Dropzone */}
